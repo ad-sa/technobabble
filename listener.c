@@ -10,22 +10,16 @@
 #define PORT 8080
 #define SA struct sockaddr
    
-// Function designed for chat between client and server.
+// Function to read the sent data
 void func(int connfd)
 {
-    char buff[MAX];
-    int n;
-    // infinite loop for chat
-    for (;;)
-    {
+        char buff[MAX];
         bzero(buff, MAX);
         // read the message from client and copy it in buffer
         read(connfd, buff, sizeof(buff));
         // print buffer which contains the client contents
         printf(buff);
         bzero(buff, MAX);
-        n = 0;
-    }
 }
    
 // Driver function
