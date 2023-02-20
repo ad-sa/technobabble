@@ -5,30 +5,61 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <errno.h>
 #include <unistd.h> // read(), write(), close()
 #define max_char 80
 #define port 8080
 
 
-// Function to read the sent data
-void read_and_print_buff(int client_sock)
+char *comm_parsed[10];
+void parse_comm(const char *inputString, const char *delim, char **argv, size_t maxtokens)
 {
-        char buff[max_char];
-        bzero(buff, max_char);
-        // read the message from client and copy it in buffer
-        read(client_sock, buff, sizeof(buff));
-        // print buffer which contains the client contents
-        printf("\n");
-        printf("Client said:  ");
-        printf(buff);
-        printf("\n");
-        bzero(buff, max_char);
-
+    size_t ntokens = 0;
+    char *tokenized = strdup(inputString);
+    if(tokenized!=NULL)
+    {
+        argv[0] = tokenized;
+        while(*tokenized!=0)
+        {
+            if(strchr(delim, *tokenized)!=NULL)
+            {
+                *tokenized = 0;
+                ntokens++;
+                if(ntokens == maxtokens - 1)
+                {
+                    break;
+                }
+                argv[ntokens] = tokenized + 1;
+            }
+            tokenized++;
+        }
+    }
 }
+
+// Function to read the sent data
+void read_and_parse_buff(int client_sock)
+{
+    char buff[max_char];
+    bzero(buff, max_char);
+    // read the message from client and copy it in buffer
+    read(client_sock, buff, sizeof(buff));
+    // print buffer which contains the client contents
+    printf("\n");
+    printf("Client said: ");
+    printf(buff);
+    parse_comm(buff, "|", comm_parsed , 5);
+}
+
+
 
 // Driver function
 int main()
 {
+
+    // Server info
+    const char *server_address = "0x20";
+
+
 
     int socket_desc, client_sock, client_size, listen_backlog=5;
     struct sockaddr_in servaddr, cli;
@@ -81,10 +112,21 @@ while(1)
         exit(0);
     }
     else
-        printf("server accept the client...\n");
+     printf("server accept the client...\n");
 
-//Print data of client to termnal
-    read_and_print_buff(client_sock);
+// Parse and check for valid server
+    read_and_parse_buff(client_sock);
+
+    printf(server_address);
+    printf("\n");
+    printf(comm_parsed[0]);
+    printf("\n");
+
+    if(comm_parsed[0] == server_address)
+        printf("Client matches adress all good!\n");
+    else
+        printf("Client doesnt match adress NO good!\n");
+
     close(client_sock);
     printf("Closed client socket...\n");
 }
