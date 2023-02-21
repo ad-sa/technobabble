@@ -3,7 +3,7 @@
 #include<sys/socket.h>
 #include<arpa/inet.h>	//inet_addr
 #include<unistd.h>	//write
-
+bool status=true;
 int main(int argc , char *argv[])
 {
 	int socket_desc , client_sock , c , read_size;
@@ -64,6 +64,6 @@ int main(int argc , char *argv[])
 	{
 		perror("recv failed");
 	}
-	
+	*/
 	return 0;
 }
