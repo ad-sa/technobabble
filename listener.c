@@ -26,7 +26,8 @@
 
 */
 
-char *comm_parsed[10];//contains parsed command given by netcat
+char *comm_parsed[10] = {0};//contains parsed command given by netcat
+
 // Parse data form a given string pointer
 void parse_comm(const char *inputString, const char *delim, char **argv, size_t maxtokens)
 {
@@ -112,7 +113,9 @@ int main()
     socket_desc = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_desc == -1)
     {
-        printf("socket creation failed...\n");
+        printf("\nError Code: %d\n", errno);
+        perror("Error Message");
+        printf("Socket creation failed...\n");
         exit(0);
     }
     else
@@ -128,7 +131,9 @@ int main()
     // Binding newly created socket to given IP and verification
     if ((bind(socket_desc, (struct sockaddr*)&servaddr, sizeof(servaddr))) != 0)
     {
-        printf("socket bind failed...\n");
+        printf("\nError Code: %d\n", errno);
+        perror("Error Message");
+        printf("Socket bind failed...\n");
         exit(0);
     }
     else
@@ -141,6 +146,8 @@ int main()
         // Now server is ready to listen and verification
         if ((listen(socket_desc, listen_backlog)) != 0)
         {
+            printf("\nError Code: %d\n", errno);
+            perror("Error Message");
             printf("Listen failed...\n");
             exit(0);
         }
@@ -152,11 +159,13 @@ int main()
         client_sock = accept(socket_desc, (struct sockaddr*)&cli, &client_size);
         if (client_sock < 0)
         {
-            printf("server accept failed...\n");
+            printf("\nError Code: %d\n", errno);
+            perror("Error Message");
+            printf("Server accept failed...\n");
             exit(0);
         }
         else
-        printf("server accept the client...\n");
+        printf("Server accept the client...\n");
 
     // Parse and check for valid server
         read_and_parse_buff(client_sock);
@@ -168,7 +177,9 @@ int main()
 
             // Echo Comm
             if(strcmp(comm_parsed[1],"0x00") == 0)
-                comm_echo(comm_parsed[3]);// 3 -> u8array_data
+                {
+                    comm_echo(comm_parsed[3]);// 3 -> u8array_data
+                }
 
             // Terminate app
             if(strcmp(comm_parsed[1],"0x01") == 0)
@@ -176,6 +187,8 @@ int main()
                     printf("\n");
                     printf("Server computed command...\n");
                     printf("%s","Server app terminated!");
+                    close(client_sock);
+                    close(socket_desc);
                     exit(0);
                 }
 
