@@ -8,8 +8,8 @@
 #include <errno.h>
 #include <time.h>
 #include <unistd.h> // read(), write(), close()
-#define max_char 80
-#define port 8080
+#define MAX_BIT 8
+#define PORT 8080
 
 /*
 
@@ -24,12 +24,56 @@
 
  <u8_address><u8_opcode/command_code><u8_data_len><u8array_data><u8_data_parity_bit>
 
+
+//echo command
+
+echo -ne '\x20\x01\x02\x00\x00\x00' | nc localhost 8080
 */
 
-char *comm_parsed[10] = {0};//contains parsed command given by netcat
+uint8_t buff[MAX_BIT]; // Cointains the buffer of the clients message
 
-// Parse data form a given string pointer
-void parse_comm(const char *inputString, const char *delim, char **argv, size_t maxtokens)
+// Function to read and parse the sent data
+void read_buff(int client_sock)
+{
+    //empties buff
+    bzero(buff, MAX_BIT);
+    // read the message from client and copy it in buffer
+    read(client_sock, buff, sizeof(buff));
+}
+
+// Command for echo (u8_opcode/command_code = 0x00)
+void comm_echo()
+{
+    printf("\n");
+    printf("Server computed command...\n");
+    printf("Output: ");
+    printf("Client said(displayed in decimal): ");
+    for(int i=0;i<sizeof(buff);i++)
+        printf("%d ",buff[i]);
+    printf("\n");
+    printf("\n");
+}
+
+
+// Command for current real time (u8_opcode/command_code = 0x02)
+void comm_time()
+{
+    time_t rawtime;
+    struct tm * timeinfo;
+
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );
+    printf("\n");
+    printf("Server computed command...\n");
+    printf("Output: ");
+    printf ( "Current local time and date: %s", asctime (timeinfo) );
+    printf("\n");
+    printf("\n");
+}
+
+// Function to parse data
+char *config_socket_parsed[] = {0}; // contains the parameters for the socket(port + IP)
+void parse(const char *inputString, const char *delim, char **argv, size_t maxtokens)
 {
     size_t ntokens = 0;
     char *tokenized = strdup(inputString);
@@ -53,57 +97,40 @@ void parse_comm(const char *inputString, const char *delim, char **argv, size_t 
     }
 }
 
-// Function to read and parse the sent data
-void read_and_parse_buff(int client_sock)
-{
-    char buff[max_char];
-    bzero(buff, max_char);
-    // read the message from client and copy it in buffer
-    read(client_sock, buff, sizeof(buff));
-    // print buffer which contains the client contents
-    printf("\n");
-    printf("Client said: ");
-    printf(buff);
-    parse_comm(buff, "|", comm_parsed , 5);
-}
-
-// Command for echo (u8_opcode/command_code = 0x00)
-void comm_echo(char *message)
-{
-    printf("\n");
-    printf("Server computed command...\n");
-    printf("Output: ");
-
-    printf("%s", message);
-    printf("\n");
-    printf("\n");
-}
-
-
-// Command for current real time (u8_opcode/command_code = 0x02)
-void comm_time()
-{
-    time_t rawtime;
-    struct tm * timeinfo;
-
-    time ( &rawtime );
-    timeinfo = localtime ( &rawtime );
-    printf("\n");
-    printf("Server computed command...\n");
-    printf("Output: ");
-    printf ( "Current local time and date: %s", asctime (timeinfo) );
-    printf("\n");
-    printf("\n");
-}
-
-
 // Driver function
 int main()
 {
 
+/// Read and parse config file for socket
+
+    FILE *socket_config_file;
+    socket_config_file = fopen( "/home/bogdan/.config/socket_config.txt", "r");
+    if(socket_config_file == NULL)
+    {
+        printf("\nError Code: %d\n", errno);
+        perror("Error opening file \n");
+    }
+
+    // Get line form file and parse it
+    char*linbuf = NULL;
+    size_t siz = 0;
+    ssize_t linlen = 0;
+    while ((linlen=getline(&linbuf, &siz, socket_config_file))>0)
+    {
+        // linbuf contains the current line
+        // linlen is the length of the current line
+        parse(linbuf," ", config_socket_parsed , linlen);
+    }
+    fclose(socket_config_file);
+    free(linbuf), linbuf=NULL;
+///
+    printf(config_socket_parsed[0]);
+    printf("\n");
+    printf(config_socket_parsed[1]);
+
     // Server info
-    const char *server_address = "0x20";
-    const char *default_server_address = "0xFF";
+    uint8_t server_address = 0x20;
+    uint8_t default_server_address = 0xFF;
 
     // Socket info
     int socket_desc, client_sock, client_size, listen_backlog=5;
@@ -125,8 +152,12 @@ int main()
 
     // assign IP, PORT
     servaddr.sin_family = AF_INET;
+
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(port);
+    servaddr.sin_port = htons(PORT);
+
+    // servaddr.sin_addr.s_addr = inet_addr(config_socket_parsed[1]); // socket_config_file[1] IP specified in config, default is LOCALHOST
+    // servaddr.sin_port = htons((int)config_socket_parsed[0]); // socket_config_file[0] PORT specified in config, default is 8080
 
     // Binding newly created socket to given IP and verification
     if ((bind(socket_desc, (struct sockaddr*)&servaddr, sizeof(servaddr))) != 0)
@@ -168,21 +199,20 @@ int main()
         printf("Server accept the client...\n");
 
     // Parse and check for valid server
-        read_and_parse_buff(client_sock);
-
-    // Command execusion
-        if(strcmp(comm_parsed[0],server_address) == 0 || strcmp(comm_parsed[0],default_server_address) == 0)
+        read_buff(client_sock);
+     // Command execusion
+        if(buff[0] == server_address || buff[0] == default_server_address)
         {
             printf("Client matches adress all good!\n");
 
             // Echo Comm
-            if(strcmp(comm_parsed[1],"0x00") == 0)
+            if(buff[1] == 0x00)
                 {
-                    comm_echo(comm_parsed[3]);// 3 -> u8array_data
+                    comm_echo(buff[3]);// 3 -> u8array_data
                 }
 
             // Terminate app
-            if(strcmp(comm_parsed[1],"0x01") == 0)
+            if(buff[1] == 0x01)
                 {
                     printf("\n");
                     printf("Server computed command...\n");
@@ -193,7 +223,7 @@ int main()
                 }
 
             // Get current time
-            if(strcmp(comm_parsed[1],"0x02") == 0)
+            if(buff[1] == 0x02)
                 {
                     comm_time();
                 }
@@ -213,3 +243,4 @@ int main()
 
 
 }
+
