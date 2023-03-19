@@ -8,8 +8,8 @@
 #include <errno.h>
 #include <time.h>
 #include <unistd.h> // read(), write(), close()
+#include <arpa/inet.h>
 #define MAX_BIT 8
-#define PORT 8080
 
 /*
 
@@ -71,63 +71,10 @@ void comm_time()
     printf("\n");
 }
 
-// Function to parse data
-char *config_socket_parsed[] = {0}; // contains the parameters for the socket(port + IP)
-void parse(const char *inputString, const char *delim, char **argv, size_t maxtokens)
-{
-    size_t ntokens = 0;
-    char *tokenized = strdup(inputString);
-    if(tokenized!=NULL)
-    {
-        argv[0] = tokenized;
-        while(*tokenized!=0)
-        {
-            if(strchr(delim, *tokenized)!=NULL)
-            {
-                *tokenized = 0;
-                ntokens++;
-                if(ntokens == maxtokens - 1)
-                {
-                    break;
-                }
-                argv[ntokens] = tokenized + 1;
-            }
-            tokenized++;
-        }
-    }
-}
 
 // Driver function
 int main()
 {
-
-/// Read and parse config file for socket
-
-    FILE *socket_config_file;
-    socket_config_file = fopen( "/home/bogdan/.config/socket_config.txt", "r");
-    if(socket_config_file == NULL)
-    {
-        printf("\nError Code: %d\n", errno);
-        perror("Error opening file \n");
-    }
-
-    // Get line form file and parse it
-    char*linbuf = NULL;
-    size_t siz = 0;
-    ssize_t linlen = 0;
-    while ((linlen=getline(&linbuf, &siz, socket_config_file))>0)
-    {
-        // linbuf contains the current line
-        // linlen is the length of the current line
-        parse(linbuf," ", config_socket_parsed , linlen);
-    }
-    fclose(socket_config_file);
-    free(linbuf), linbuf=NULL;
-///
-    printf(config_socket_parsed[0]);
-    printf("\n");
-    printf(config_socket_parsed[1]);
-
     // Server info
     uint8_t server_address = 0x20;
     uint8_t default_server_address = 0xFF;
@@ -151,13 +98,23 @@ int main()
     bzero(&servaddr, sizeof(servaddr));
 
     // assign IP, PORT
+
+    FILE *socket_config_file;
+    socket_config_file = fopen( "/home/bogdan/.config/socket_config.txt", "r");
+    if(socket_config_file == NULL)
+    {
+        printf("\nError Code: %d\n", errno);
+        perror("Error opening file \n");
+    }
+
+    int port=0;
+    fscanf(socket_config_file,"%d", &port);
+    char ip_address[9];
+    fscanf(socket_config_file, "%s", &ip_address);
+
     servaddr.sin_family = AF_INET;
-
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(PORT);
-
-    // servaddr.sin_addr.s_addr = inet_addr(config_socket_parsed[1]); // socket_config_file[1] IP specified in config, default is LOCALHOST
-    // servaddr.sin_port = htons((int)config_socket_parsed[0]); // socket_config_file[0] PORT specified in config, default is 8080
+    servaddr.sin_addr.s_addr = inet_addr(ip_address);
+    servaddr.sin_port = htons(port);
 
     // Binding newly created socket to given IP and verification
     if ((bind(socket_desc, (struct sockaddr*)&servaddr, sizeof(servaddr))) != 0)
