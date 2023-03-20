@@ -95,7 +95,7 @@ int main()
     else
         printf("Socket successfully created..\n");
 
-    bzero(&servaddr, sizeof(servaddr));
+
 
     // assign IP, PORT
 
@@ -111,6 +111,8 @@ int main()
     fscanf(socket_config_file,"%d", &port);
     char ip_address[9];
     fscanf(socket_config_file, "%s", &ip_address);
+
+    bzero(&servaddr, sizeof(servaddr));
 
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = inet_addr(ip_address);

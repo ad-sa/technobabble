@@ -11,7 +11,6 @@
 #include <unistd.h> // read(), write(), close()
 #define MAX_BIT 8
 
-
 // Driver function
 int main()
 {
@@ -26,7 +25,7 @@ int main()
 
     int port=0;
     fscanf(socket_config_file,"%d", &port);
-    char ip_address[9];
+    char ip_address[10];
     fscanf(socket_config_file, "%s", &ip_address);
 
     // Server info
@@ -38,7 +37,11 @@ int main()
     struct sockaddr_in servaddr, cli;
 
     // socket create and verification
+    servaddr.sin_family = AF_INET;
     socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+    servaddr.sin_addr.s_addr = inet_addr(ip_address);
+    servaddr.sin_port = htons(port);
+
     if (socket_desc == -1)
     {
         printf("\nError Code: %d\n", errno);
@@ -49,12 +52,6 @@ int main()
     else
         printf("Socket successfully created..\n");
 
-    bzero(&servaddr, sizeof(servaddr));
-
-    // assign IP, PORT
-
-    servaddr.sin_addr.s_addr = inet_addr(ip_address);
-    servaddr.sin_port = htons(port);
     // Binding newly created socket to given IP and verification
     if ((connect(socket_desc, (struct sockaddr*)&servaddr, sizeof(servaddr))) < 0)
     {
@@ -64,9 +61,10 @@ int main()
         exit(0);
     }
     else
-        printf("Socket successfully binded..\n");
-
-    if( send(socket_desc , message , strlen(message) , 0) < 0)
+    { printf("Socket successfully binded..\n");
+        perror("Error Message");
+    }
+    if(send(socket_desc , message , strlen(message) , 0) < 0)
         {
             printf("\nError Code: %d\n", errno);
             printf("Send failed \n");
@@ -74,8 +72,8 @@ int main()
         }
     else
     {
+        perror("Error Message");
         printf("Send succeded!\n");
-        printf("Closing...\n");
     }
 
     close(socket_desc);
