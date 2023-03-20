@@ -31,7 +31,7 @@ int main()
     // Server info
     uint8_t server_address = 0x20;
     uint8_t default_server_address = 0xFF;
-    uint8_t message[1000]={0x20, 0x00, 0x02, 0x00, 0x00, 0x00};
+    uint8_t message[1000]={0x20, 0x01, 0x02, 0x00, 0x00, 0x00};
     // Socket info
     int socket_desc, client_sock, client_size, listen_backlog=5;
     struct sockaddr_in servaddr, cli;
@@ -61,9 +61,8 @@ int main()
         exit(0);
     }
     else
-    { printf("Socket successfully binded..\n");
-        perror("Error Message");
-    }
+        printf("Socket successfully binded..\n");
+
     if(send(socket_desc , message , strlen(message) , 0) < 0)
         {
             printf("\nError Code: %d\n", errno);
@@ -71,10 +70,7 @@ int main()
             return 1;
         }
     else
-    {
-        perror("Error Message");
         printf("Send succeded!\n");
-    }
 
     close(socket_desc);
 	return 0;
